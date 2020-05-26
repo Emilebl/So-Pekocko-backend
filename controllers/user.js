@@ -1,9 +1,21 @@
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const mailValidator = require('email-validator'); // Little email validation plugin that acts as a regex
+const passwordValidator = require('password-validator'); // Little password validation plugin that we configure later on
 
 const User = require('../models/User');
 
-exports.signup = (req, res, next) => {
+var schema = new passwordValidator(); // And here we declare our password validation in the form of a schema
+
+schema
+.is().min(8)  // Minimum 8 characters long
+.is().max(30) // Maximum 30 characters long
+.has().not().spaces();  // Password cannot have spaces
+
+exports.signup = (req, res, next) => { // Function that allows users to register an account
+  if (!mailValidator.validate(req.body.email) || (!schema.validate(req.body.password))) {  // We check email && password validity
+      throw { error: "Merci de bien vouloir entrer une adresse email et un mot de passe valide !" }  // Fails if invalid
+  } else if (mailValidator.validate(req.body.email) && (schema.validate(req.body.password))) {  // If both are valid
     bcrypt.hash(req.body.password, 10)
     .then(hash => {
       const user = new User({
@@ -15,6 +27,7 @@ exports.signup = (req, res, next) => {
         .catch(error => res.status(400).json({ error }));
     })
     .catch(error => res.status(500).json({ error }));
+  }
 };
 
 exports.login = (req, res, next) => {
